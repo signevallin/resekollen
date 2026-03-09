@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { MapPin, ArrowRight, GitMerge, Loader2 } from "lucide-react";
+import { MapPin, ArrowRight, Loader2 } from "lucide-react";
 import { slaIhopResor } from "@/app/actions/slaIhopResor";
 import { getCountryFlag } from "@/lib/countries";
 import type { Resa } from "@/lib/schema";
@@ -20,10 +19,9 @@ function daysBetween(start: string, end: string): number {
 
 export default function TidslinjeList({ trips }: { trips: Resa[] }) {
   const router = useRouter();
-  const [mergeMode, setMergeMode] = useState(false);
-  const [dragId, setDragId] = useState<string | null>(null);
+  const [dragId,     setDragId]     = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
-  const [merging, setMerging] = useState(false);
+  const [merging,    setMerging]    = useState(false);
 
   // Group by year, newest first
   const resorPerAr: Record<string, Resa[]> = {};
@@ -61,7 +59,6 @@ export default function TidslinjeList({ trips }: { trips: Resa[] }) {
         slutDatum,
       });
       router.refresh();
-      setMergeMode(false);
     } finally {
       setMerging(false);
       setDragId(null);
@@ -71,21 +68,12 @@ export default function TidslinjeList({ trips }: { trips: Resa[] }) {
 
   return (
     <>
-      {/* Merge-mode hint */}
-      {mergeMode && (
-        <p className="text-xs text-stone-400 mb-5 -mt-2">
-          Dra ett kort och släpp det på ett annat för att slå ihop resorna.
-        </p>
-      )}
-
       {/* Merge spinner overlay */}
       {merging && (
         <div className="fixed inset-0 bg-white/60 flex items-center justify-center z-50">
           <div className="flex items-center gap-3 bg-white border border-stone-200 rounded-xl px-6 py-4 shadow-lg">
             <Loader2 className="animate-spin text-purple-600" size={20} />
-            <span className="text-sm font-medium text-stone-700">
-              Slår ihop…
-            </span>
+            <span className="text-sm font-medium text-stone-700">Slår ihop…</span>
           </div>
         </div>
       )}
@@ -106,143 +94,103 @@ export default function TidslinjeList({ trips }: { trips: Resa[] }) {
 
             {/* Timeline */}
             <div className="relative pl-7">
-              {/* Vertical line */}
               <div className="absolute left-2.5 top-0 bottom-0 w-px bg-stone-200" />
 
               <div className="space-y-4">
                 {resorPerAr[year].map((resa) => {
                   const startDate = new Date(resa.startDatum);
-                  const endDate = new Date(resa.slutDatum);
-                  const days = daysBetween(resa.startDatum, resa.slutDatum);
-                  const flag = getCountryFlag(resa.land);
+                  const endDate   = new Date(resa.slutDatum);
+                  const days      = daysBetween(resa.startDatum, resa.slutDatum);
+                  const flag      = getCountryFlag(resa.land);
 
                   const startFormatted = startDate.toLocaleDateString("sv-SE", {
-                    day: "numeric",
-                    month: "short",
+                    day: "numeric", month: "short",
                   });
                   const endFormatted = endDate.toLocaleDateString("sv-SE", {
-                    day: "numeric",
-                    month: "short",
+                    day: "numeric", month: "short",
                   });
 
-                  const isDragging = dragId === resa.id;
-                  const isTarget = dragOverId === resa.id;
+                  const isDragging = dragId     === resa.id;
+                  const isTarget   = dragOverId === resa.id;
 
                   const dotClass = `absolute -left-4 top-5 w-3 h-3 rounded-full border-2 border-white shadow-sm transition-all ${
-                    isTarget
-                      ? "bg-emerald-500 scale-125"
-                      : isDragging
-                      ? "bg-stone-300"
-                      : "bg-purple-400"
+                    isTarget   ? "bg-emerald-500 scale-125"
+                    : isDragging ? "bg-stone-300"
+                    :              "bg-purple-400"
                   }`;
 
-                  const cardClass = `bg-white rounded-xl border p-4 transition-all ${
-                    isDragging
-                      ? "opacity-30 scale-95 border-stone-200"
-                      : isTarget
-                      ? "border-emerald-500 ring-2 ring-emerald-400 shadow-lg"
-                      : "border-stone-200"
+                  const cardClass = `bg-white rounded-xl border p-4 transition-all cursor-pointer ${
+                    isDragging ? "opacity-30 scale-95 border-stone-200"
+                    : isTarget ? "border-emerald-500 ring-2 ring-emerald-400 shadow-lg"
+                    :            "border-stone-200 hover:border-purple-200 hover:shadow-sm group"
                   }`;
-
-                  const cardInner = (
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        {/* Destination + flag */}
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xl">{flag}</span>
-                          <h3 className="font-semibold text-stone-800 truncate">
-                            {resa.destination}
-                          </h3>
-                        </div>
-                        {/* Meta */}
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-stone-400">
-                          <span className="flex items-center gap-1">
-                            <MapPin size={11} />
-                            {resa.land}
-                          </span>
-                          <span>·</span>
-                          <span>
-                            {startFormatted}
-                            {resa.startDatum !== resa.slutDatum
-                              ? ` – ${endFormatted}`
-                              : ""}
-                          </span>
-                          <span>·</span>
-                          <span>
-                            {days} {days === 1 ? "dag" : "dagar"}
-                          </span>
-                        </div>
-                      </div>
-                      {!mergeMode && (
-                        <ArrowRight
-                          size={15}
-                          className="text-stone-300 group-hover:text-purple-400 flex-shrink-0 mt-1 transition-colors"
-                        />
-                      )}
-                    </div>
-                  );
 
                   return (
                     <div key={resa.id} className="relative">
-                      {/* Timeline dot */}
                       <div className={dotClass} />
 
-                      {mergeMode ? (
-                        <div
-                          draggable
-                          onDragStart={(e) => {
-                            e.dataTransfer.setData("text/plain", resa.id);
-                            e.dataTransfer.effectAllowed = "move";
-                            setDragId(resa.id);
-                          }}
-                          onDragOver={(e) => {
-                            e.preventDefault();
-                            e.dataTransfer.dropEffect = "move";
-                            if (dragId !== resa.id) setDragOverId(resa.id);
-                          }}
-                          onDragLeave={(e) => {
-                            if (
-                              !e.currentTarget.contains(
-                                e.relatedTarget as Node
-                              )
-                            ) {
-                              setDragOverId(null);
-                            }
-                          }}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            const srcId = e.dataTransfer.getData("text/plain");
+                      <div
+                        draggable
+                        onClick={() => router.push(`/resor/${resa.id}`)}
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData("text/plain", resa.id);
+                          e.dataTransfer.effectAllowed = "move";
+                          setDragId(resa.id);
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = "move";
+                          if (dragId !== resa.id) setDragOverId(resa.id);
+                        }}
+                        onDragLeave={(e) => {
+                          if (!e.currentTarget.contains(e.relatedTarget as Node)) {
                             setDragOverId(null);
-                            setDragId(null);
-                            handleDrop(srcId, resa.id);
-                          }}
-                          onDragEnd={() => {
-                            setDragId(null);
-                            setDragOverId(null);
-                          }}
-                          className={`${cardClass} cursor-grab active:cursor-grabbing`}
-                        >
-                          {cardInner}
-                          {resa.beskrivning && (
-                            <p className="text-xs text-stone-400 mt-2.5 line-clamp-2 leading-relaxed">
-                              {resa.beskrivning}
-                            </p>
-                          )}
-                        </div>
-                      ) : (
-                        <Link href={`/resor/${resa.id}`}>
-                          <div
-                            className={`${cardClass} hover:border-purple-200 hover:shadow-sm group`}
-                          >
-                            {cardInner}
-                            {resa.beskrivning && (
-                              <p className="text-xs text-stone-400 mt-2.5 line-clamp-2 leading-relaxed">
-                                {resa.beskrivning}
-                              </p>
-                            )}
+                          }
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const srcId = e.dataTransfer.getData("text/plain");
+                          setDragOverId(null);
+                          setDragId(null);
+                          handleDrop(srcId, resa.id);
+                        }}
+                        onDragEnd={() => { setDragId(null); setDragOverId(null); }}
+                        className={cardClass}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xl">{flag}</span>
+                              <h3 className="font-semibold text-stone-800 truncate">
+                                {resa.destination}
+                              </h3>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-stone-400">
+                              <span className="flex items-center gap-1">
+                                <MapPin size={11} />
+                                {resa.land}
+                              </span>
+                              <span>·</span>
+                              <span>
+                                {startFormatted}
+                                {resa.startDatum !== resa.slutDatum ? ` – ${endFormatted}` : ""}
+                              </span>
+                              <span>·</span>
+                              <span>{days} {days === 1 ? "dag" : "dagar"}</span>
+                            </div>
                           </div>
-                        </Link>
-                      )}
+                          <ArrowRight
+                            size={15}
+                            className="text-stone-300 group-hover:text-purple-400 flex-shrink-0 mt-1 transition-colors"
+                          />
+                        </div>
+
+                        {resa.beskrivning && (
+                          <p className="text-xs text-stone-400 mt-2.5 line-clamp-2 leading-relaxed">
+                            {resa.beskrivning}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -250,25 +198,6 @@ export default function TidslinjeList({ trips }: { trips: Resa[] }) {
             </div>
           </div>
         ))}
-      </div>
-
-      {/* Floating merge-mode toggle */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
-        <button
-          onClick={() => {
-            setMergeMode(!mergeMode);
-            setDragId(null);
-            setDragOverId(null);
-          }}
-          className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium shadow-lg transition-all ${
-            mergeMode
-              ? "bg-stone-700 text-white hover:bg-stone-800"
-              : "bg-white border border-stone-200 text-stone-600 hover:bg-stone-50"
-          }`}
-        >
-          <GitMerge size={15} />
-          {mergeMode ? "Avsluta sammanslagning" : "Slå ihop resor"}
-        </button>
       </div>
     </>
   );

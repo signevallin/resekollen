@@ -2,24 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { MapPin, Calendar, GitMerge, Loader2 } from "lucide-react";
+import { MapPin, Calendar, Loader2 } from "lucide-react";
 import { slaIhopResor } from "@/app/actions/slaIhopResor";
 import type { Resa } from "@/lib/schema";
-
-// ── Inline SVG grip dots ───────────────────────────────────────────────────
-function GripDots() {
-  return (
-    <svg width="10" height="16" viewBox="0 0 10 16" fill="#4C3D19" opacity="0.5">
-      <circle cx="3" cy="4"  r="1.5" />
-      <circle cx="7" cy="4"  r="1.5" />
-      <circle cx="3" cy="8"  r="1.5" />
-      <circle cx="7" cy="8"  r="1.5" />
-      <circle cx="3" cy="12" r="1.5" />
-      <circle cx="7" cy="12" r="1.5" />
-    </svg>
-  );
-}
 
 function daysBetween(start: string, end: string) {
   return Math.max(
@@ -32,7 +17,6 @@ function daysBetween(start: string, end: string) {
 
 export default function ResorList({ trips }: { trips: Resa[] }) {
   const router = useRouter();
-  const [mergeMode, setMergeMode]   = useState(false);
   const [dragId,     setDragId]     = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [merging,    setMerging]    = useState(false);
@@ -43,6 +27,7 @@ export default function ResorList({ trips }: { trips: Resa[] }) {
     const a = trips.find((t) => t.id === sourceId)!;
     const b = trips.find((t) => t.id === targetId)!;
     if (!a || !b) return;
+
     const [first, second] = [a, b].sort((x, y) =>
       x.startDatum.localeCompare(y.startDatum)
     );
@@ -59,7 +44,6 @@ export default function ResorList({ trips }: { trips: Resa[] }) {
         slutDatum,
       });
       router.refresh();
-      setMergeMode(false);
     } finally {
       setMerging(false);
       setDragId(null);
@@ -69,13 +53,6 @@ export default function ResorList({ trips }: { trips: Resa[] }) {
 
   return (
     <>
-      {/* Merge-mode hint */}
-      {mergeMode && (
-        <p className="text-xs text-stone-400 mb-4 -mt-4">
-          Dra ett kort och släpp det på ett annat för att slå ihop resorna.
-        </p>
-      )}
-
       {/* Merge spinner overlay */}
       {merging && (
         <div className="fixed inset-0 bg-white/60 flex items-center justify-center z-50">
@@ -92,24 +69,47 @@ export default function ResorList({ trips }: { trips: Resa[] }) {
           const isDragging = dragId     === resa.id;
           const isTarget   = dragOverId === resa.id;
 
-          const cardClass = `bg-white rounded-xl border overflow-hidden transition-all ${
+          const cardClass = `bg-white rounded-xl border overflow-hidden transition-all cursor-pointer ${
             isDragging ? "opacity-30 scale-95 border-stone-200"
             : isTarget ? "border-emerald-500 ring-2 ring-emerald-400 shadow-lg"
-            :            "border-stone-200"
+            :            "border-stone-200 hover:shadow-md"
           }`;
 
-          const inner = (
-            <>
+          return (
+            <div
+              key={resa.id}
+              draggable
+              onClick={() => router.push(`/resor/${resa.id}`)}
+              onDragStart={(e) => {
+                e.dataTransfer.setData("text/plain", resa.id);
+                e.dataTransfer.effectAllowed = "move";
+                setDragId(resa.id);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                if (dragId !== resa.id) setDragOverId(resa.id);
+              }}
+              onDragLeave={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                  setDragOverId(null);
+                }
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                const srcId = e.dataTransfer.getData("text/plain");
+                setDragOverId(null);
+                setDragId(null);
+                handleDrop(srcId, resa.id);
+              }}
+              onDragEnd={() => { setDragId(null); setDragOverId(null); }}
+              className={cardClass}
+            >
               <div className="h-36 bg-gradient-to-br from-emerald-400 to-teal-600 relative flex items-center justify-center">
                 {resa.omslagsbild ? (
                   <img src={resa.omslagsbild} alt={resa.destination} className="w-full h-full object-cover" />
                 ) : (
                   <MapPin className="text-white/60" size={40} />
-                )}
-                {mergeMode && (
-                  <div className="absolute top-2 left-2 bg-white/90 rounded-md p-1.5 shadow-sm pointer-events-none">
-                    <GripDots />
-                  </div>
                 )}
               </div>
               <div className="p-4">
@@ -126,65 +126,9 @@ export default function ResorList({ trips }: { trips: Resa[] }) {
                   </span>
                 </div>
               </div>
-            </>
-          );
-
-          if (mergeMode) {
-            return (
-              <div
-                key={resa.id}
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData("text/plain", resa.id);
-                  e.dataTransfer.effectAllowed = "move";
-                  setDragId(resa.id);
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.dataTransfer.dropEffect = "move";
-                  if (dragId !== resa.id) setDragOverId(resa.id);
-                }}
-                onDragLeave={(e) => {
-                  if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                    setDragOverId(null);
-                  }
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const srcId = e.dataTransfer.getData("text/plain");
-                  setDragOverId(null);
-                  setDragId(null);
-                  handleDrop(srcId, resa.id);
-                }}
-                onDragEnd={() => { setDragId(null); setDragOverId(null); }}
-                className={`${cardClass} cursor-grab active:cursor-grabbing`}
-              >
-                {inner}
-              </div>
-            );
-          }
-
-          return (
-            <Link key={resa.id} href={`/resor/${resa.id}`} className={`${cardClass} hover:shadow-md`}>
-              {inner}
-            </Link>
+            </div>
           );
         })}
-      </div>
-
-      {/* Floating merge-mode toggle */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
-        <button
-          onClick={() => { setMergeMode(!mergeMode); setDragId(null); setDragOverId(null); }}
-          className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium shadow-lg transition-all ${
-            mergeMode
-              ? "bg-stone-700 text-white hover:bg-stone-800"
-              : "bg-white border border-stone-200 text-stone-600 hover:bg-stone-50"
-          }`}
-        >
-          <GitMerge size={15} />
-          {mergeMode ? "Avsluta sammanslagning" : "Slå ihop resor"}
-        </button>
       </div>
     </>
   );
