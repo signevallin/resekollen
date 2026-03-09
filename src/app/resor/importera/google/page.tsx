@@ -15,7 +15,6 @@ import {
   CheckCircle2,
   Globe,
   GitMerge,
-  GripVertical,
 } from "lucide-react";
 import { importerGoogleResor, type TripToImport } from "@/app/actions/importGoogle";
 
@@ -617,9 +616,8 @@ export default function GoogleImportPage() {
               {trips.every((t) => t.selected) ? "Avmarkera alla" : "Markera alla"}
             </button>
           </div>
-          <p className="text-xs text-stone-400 mb-2 flex items-center gap-1.5">
-            <GripVertical size={12} />
-            Dra en rad och släpp den på en annan för att slå ihop dem — eller markera flera och klicka "Slå ihop".
+          <p className="text-xs text-stone-400 mb-2">
+            ⠿ Dra i handtaget och släpp på en annan rad för att slå ihop dem — eller markera flera och klicka "Slå ihop".
           </p>
 
           <div className="border border-stone-200 rounded-xl overflow-hidden mb-6">
@@ -658,10 +656,17 @@ export default function GoogleImportPage() {
                           onDragStart={(e) => handleDragStart(e, i)}
                           onDragEnd={handleDragEnd}
                           onClick={(e) => e.stopPropagation()}
-                          className="cursor-grab active:cursor-grabbing text-stone-400 hover:text-stone-600 transition-colors shrink-0"
+                          style={{ cursor: "grab", lineHeight: 0 }}
                           title="Dra för att slå ihop"
                         >
-                          <GripVertical size={15} />
+                          <svg width="10" height="16" viewBox="0 0 10 16" fill="#A89880">
+                            <circle cx="3" cy="4"  r="1.5"/>
+                            <circle cx="7" cy="4"  r="1.5"/>
+                            <circle cx="3" cy="8"  r="1.5"/>
+                            <circle cx="7" cy="8"  r="1.5"/>
+                            <circle cx="3" cy="12" r="1.5"/>
+                            <circle cx="7" cy="12" r="1.5"/>
+                          </svg>
                         </div>
                         {trip.selected
                           ? <CheckSquare size={15} className="text-emerald-700 shrink-0" />
