@@ -626,8 +626,7 @@ export default function GoogleImportPage() {
             <table className="w-full text-sm">
               <thead className="bg-stone-50 border-b border-stone-200">
                 <tr>
-                  <th className="w-7 p-3" />
-                  <th className="w-10 p-3" />
+                  <th className="w-14 p-3" />
                   <th className="text-left p-3 font-medium text-stone-600">Destination</th>
                   <th className="text-left p-3 font-medium text-stone-600">Land</th>
                   <th className="text-left p-3 font-medium text-stone-600">Datum</th>
@@ -652,22 +651,22 @@ export default function GoogleImportPage() {
                         : "bg-stone-50 opacity-50 cursor-pointer"
                     }`}
                   >
-                    <td
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, i)}
-                      onDragEnd={handleDragEnd}
-                      className="pl-3 pr-1 py-3 text-center cursor-grab active:cursor-grabbing"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <GripVertical
-                        size={16}
-                        className="text-stone-400 hover:text-stone-600 transition-colors"
-                      />
-                    </td>
-                    <td className="p-3 text-center">
-                      {trip.selected
-                        ? <CheckSquare size={16} className="text-emerald-700 mx-auto" />
-                        : <Square size={16} className="text-stone-400 mx-auto" />}
+                    <td className="p-3 w-14">
+                      <div className="flex items-center gap-2">
+                        <div
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, i)}
+                          onDragEnd={handleDragEnd}
+                          onClick={(e) => e.stopPropagation()}
+                          className="cursor-grab active:cursor-grabbing text-stone-400 hover:text-stone-600 transition-colors shrink-0"
+                          title="Dra för att slå ihop"
+                        >
+                          <GripVertical size={15} />
+                        </div>
+                        {trip.selected
+                          ? <CheckSquare size={15} className="text-emerald-700 shrink-0" />
+                          : <Square size={15} className="text-stone-400 shrink-0" />}
+                      </div>
                     </td>
                     <td className="p-3">
                       <div className="flex items-center gap-2">
