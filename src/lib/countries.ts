@@ -128,6 +128,7 @@ const COUNTRY_DB: CountryEntry[] = [
   { numeric: 112, alpha2: "BY", englishName: "Belarus" },
   { numeric: 51,  alpha2: "AM", englishName: "Armenia" },
   { numeric: 31,  alpha2: "AZ", englishName: "Azerbaijan" },
+  { numeric: 818, alpha2: "EG", englishName: "Egypt" },
 ];
 
 // Swedish name → alpha2 lookup (lowercase keys)
@@ -208,5 +209,29 @@ export function getCountryFlag(name: string): string {
   if (!entry) return "🌍";
   return getFlagEmoji(entry.alpha2);
 }
+
+// Properly-capitalised Swedish country names for autocomplete
+export const LAND_FORSLAG: string[] = [
+  "Afghanistan", "Albanien", "Algeriet", "Angola", "Argentina", "Armenien",
+  "Australien", "Azerbajdzjan", "Bahrain", "Bangladesh", "Belgien", "Bolivia",
+  "Bosnien", "Botswana", "Brasilien", "Bulgarien", "Chile", "Colombia",
+  "Costa Rica", "Cypern", "Danmark", "Dominikanska republiken", "Ecuador",
+  "Egypten", "El Salvador", "Estland", "Etiopien", "Filippinerna", "Finland",
+  "Frankrike", "Georgien", "Ghana", "Grekland", "Guatemala", "Honduras",
+  "Indien", "Indonesien", "Irak", "Iran", "Irland", "Island", "Israel",
+  "Italien", "Jamaica", "Japan", "Jordanien", "Kambodja", "Kanada",
+  "Kazakstan", "Kenya", "Kina", "Kroatien", "Kuba", "Laos", "Lettland",
+  "Libanon", "Litauen", "Luxemburg", "Madagaskar", "Malaysia", "Malta",
+  "Marocko", "Mexiko", "Moçambique", "Mongoliet", "Montenegro", "Myanmar",
+  "Namibia", "Nepal", "Nederländerna", "Nicaragua", "Nigeria",
+  "Nordmakedonien", "Norge", "Nya Zeeland", "Oman", "Pakistan", "Panama",
+  "Peru", "Polen", "Portugal", "Qatar", "Rumänien", "Ryssland",
+  "Saudiarabien", "Senegal", "Serbien", "Singapore", "Slovakien",
+  "Slovenien", "Somalia", "Spanien", "Sri Lanka", "Storbritannien",
+  "Sverige", "Schweiz", "Sydafrika", "Sydkorea", "Syrien", "Tanzania",
+  "Thailand", "Tjeckien", "Tunisien", "Turkiet", "Tyskland",
+  "Förenade Arabemiraten", "Ukraina", "Ungern", "Uruguay", "USA",
+  "Vietnam", "Vitryssland", "Zambia", "Zimbabwe", "Österrike",
+].sort((a, b) => a.localeCompare(b, "sv"));
 
 export type { CountryEntry };

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useRef, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowLeft, Plus, X, Loader2, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
 import { updateResa, deleteResa } from "@/app/actions/resor";
 import type { Resa } from "@/lib/schema";
+import LandInput from "@/components/resor/LandInput";
 
 function parseLand(raw: string): string[] {
   return raw
@@ -15,12 +15,8 @@ function parseLand(raw: string): string[] {
 }
 
 export default function RedigeraResaForm({ resa }: { resa: Resa }) {
-  const router       = useRouter();
-  const countryInput = useRef<HTMLInputElement>(null);
-
   const [destination, setDestination] = useState(resa.destination);
   const [countries,   setCountries]   = useState<string[]>(parseLand(resa.land));
-  const [newCountry,  setNewCountry]  = useState("");
   const [startDatum,  setStartDatum]  = useState(resa.startDatum);
   const [slutDatum,   setSlutDatum]   = useState(resa.slutDatum);
   const [beskrivning, setBeskrivning] = useState(resa.beskrivning ?? "");
@@ -28,19 +24,6 @@ export default function RedigeraResaForm({ resa }: { resa: Resa }) {
 
   const [saving,   startSave]   = useTransition();
   const [deleting, startDelete] = useTransition();
-
-  // ── Countries ──────────────────────────────────────────────────────────────
-
-  const addCountry = () => {
-    const v = newCountry.trim();
-    if (!v || countries.includes(v)) return;
-    setCountries((prev) => [...prev, v]);
-    setNewCountry("");
-    countryInput.current?.focus();
-  };
-
-  const removeCountry = (i: number) =>
-    setCountries((prev) => prev.filter((_, j) => j !== i));
 
   // ── Submit ─────────────────────────────────────────────────────────────────
 
@@ -103,49 +86,11 @@ export default function RedigeraResaForm({ resa }: { resa: Resa }) {
           <label className="block text-sm font-medium text-stone-700 mb-1.5">
             Land / länder
           </label>
-
-          {/* Chips */}
-          <div className="flex flex-wrap gap-2 mb-2 min-h-[2rem]">
-            {countries.map((c, i) => (
-              <span
-                key={i}
-                className="flex items-center gap-1.5 bg-purple-100 text-purple-800 text-sm px-3 py-1 rounded-full"
-              >
-                {c}
-                <button
-                  type="button"
-                  onClick={() => removeCountry(i)}
-                  className="text-purple-400 hover:text-purple-700 transition-colors"
-                  aria-label={`Ta bort ${c}`}
-                >
-                  <X size={13} />
-                </button>
-              </span>
-            ))}
-          </div>
-
-          {/* Add country */}
-          <div className="flex gap-2">
-            <input
-              ref={countryInput}
-              type="text"
-              value={newCountry}
-              onChange={(e) => setNewCountry(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") { e.preventDefault(); addCountry(); }
-              }}
-              placeholder="Lägg till land…"
-              className="flex-1 border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-            />
-            <button
-              type="button"
-              onClick={addCountry}
-              disabled={!newCountry.trim()}
-              className="flex items-center gap-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl px-4 py-2.5 text-sm font-medium disabled:opacity-40 transition-colors"
-            >
-              <Plus size={15} /> Lägg till
-            </button>
-          </div>
+          <LandInput
+            value={countries}
+            onChange={setCountries}
+            ringColor="focus-within:ring-purple-400"
+          />
         </div>
 
         {/* Dates */}

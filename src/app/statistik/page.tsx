@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { resor } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { BarChart3, Globe, MapPin, Clock, Plane } from "lucide-react";
-import { getCountryFlag, splitLand } from "@/lib/countries";
+import { getCountryFlag } from "@/lib/countries";
 
 function daysBetween(start: string, end: string): number {
   const s = new Date(start);
@@ -22,12 +22,8 @@ export default async function StatistikPage() {
     .where(eq(resor.userId, session.user.id));
 
   const totalResor = trips.length;
-  const unikaLander = new Set(
-    trips.flatMap((t) => splitLand(t.land)).map((c) => c.trim().toLowerCase())
-  ).size;
-  const unikaDestinationer = new Set(
-    trips.flatMap((t) => splitLand(t.destination)).map((d) => d.trim().toLowerCase())
-  ).size;
+  const unikaLander = new Set(trips.map((t) => t.land.trim().toLowerCase())).size;
+  const unikaDestinationer = new Set(trips.map((t) => t.destination.trim().toLowerCase())).size;
   const totalDagar = trips.reduce(
     (sum, t) => sum + daysBetween(t.startDatum, t.slutDatum),
     0
@@ -45,10 +41,8 @@ export default async function StatistikPage() {
   // Top countries
   const landerCount: Record<string, number> = {};
   trips.forEach((t) => {
-    for (const country of splitLand(t.land)) {
-      const key = country.trim();
-      landerCount[key] = (landerCount[key] ?? 0) + 1;
-    }
+    const key = t.land.trim();
+    landerCount[key] = (landerCount[key] ?? 0) + 1;
   });
   const topLander = Object.entries(landerCount)
     .sort((a, b) => b[1] - a[1])

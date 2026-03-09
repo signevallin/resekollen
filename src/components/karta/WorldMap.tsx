@@ -59,14 +59,14 @@ export default function WorldMap({ visitedNumerics }: Props) {
     <svg
       viewBox="0 0 900 500"
       className="w-full rounded-xl"
-      style={{ background: "linear-gradient(180deg, #F0EAE0 0%, #E5D7C4 100%)" }}
+      style={{ background: "linear-gradient(180deg, #e8f4f8 0%, #d4ecf7 100%)" }}
     >
       {paths.map((p) => (
         <path
           key={p.id}
           d={p.d}
-          fill={p.visited ? "#889063" : "#DDD0BA"}
-          stroke="#F5F0E8"
+          fill={p.visited ? "#10b981" : "#d6d3d1"}
+          stroke="white"
           strokeWidth={0.5}
         />
       ))}

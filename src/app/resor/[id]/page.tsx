@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { resor } from "@/lib/schema";
 import { eq, and } from "drizzle-orm";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, ListChecks, Calendar, MapPin, Pencil } from "lucide-react";
+import { ArrowLeft, BookOpen, ListChecks, Calendar, MapPin } from "lucide-react";
 
 export default async function ResaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -26,22 +26,13 @@ export default async function ResaPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <Link
-          href="/resor"
-          className="inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-800 transition-colors"
-        >
-          <ArrowLeft size={16} />
-          Mina resor
-        </Link>
-        <Link
-          href={`/resor/${id}/redigera`}
-          className="inline-flex items-center gap-1.5 text-sm text-stone-400 hover:text-stone-700 transition-colors"
-        >
-          <Pencil size={14} />
-          Redigera
-        </Link>
-      </div>
+      <Link
+        href="/resor"
+        className="inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-800 mb-6 transition-colors"
+      >
+        <ArrowLeft size={16} />
+        Mina resor
+      </Link>
 
       <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden mb-6">
         <div className="h-48 bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center">
