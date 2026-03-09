@@ -4,17 +4,8 @@ import { db } from "@/lib/db";
 import { resor } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { lookupCountry, getFlagEmoji, getCountryNumericCode } from "@/lib/countries";
-import dynamic from "next/dynamic";
+import WorldMap from "@/components/karta/WorldMap";
 import { Globe } from "lucide-react";
-
-const WorldMap = dynamic(() => import("@/components/karta/WorldMap"), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-56 bg-stone-50 rounded-xl flex items-center justify-center">
-      <p className="text-stone-400 text-sm animate-pulse">Laddar karta...</p>
-    </div>
-  ),
-});
 
 export default async function KartaPage() {
   const session = await auth();
