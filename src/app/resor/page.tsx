@@ -1,37 +1,21 @@
-"use client";
-
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { useAuth } from "@/hooks/useAuth";
-import { Resa } from "@/types";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { db } from "@/lib/db";
+import { resor } from "@/lib/schema";
+import { eq } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import Link from "next/link";
 import { MapPin, PlusCircle, Calendar, Globe } from "lucide-react";
 
-export default function ResorPage() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-  const [resor, setResor] = useState<Resa[]>([]);
+export default async function ResorPage() {
+  const session = await auth();
+  if (!session) redirect("/auth");
 
-  useEffect(() => {
-    if (!loading && !user) router.replace("/auth");
-  }, [user, loading, router]);
-
-  useEffect(() => {
-    if (!user) return;
-    const q = query(
-      collection(db, "resor"),
-      where("userId", "==", user.uid),
-      orderBy("startDatum", "desc")
-    );
-    const unsub = onSnapshot(q, (snap) => {
-      setResor(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Resa)));
-    });
-    return unsub;
-  }, [user]);
-
-  if (loading) return <div className="text-center py-20 text-stone-400">Laddar...</div>;
+  const alleResor = await db
+    .select()
+    .from(resor)
+    .where(eq(resor.userId, session.user.id))
+    .orderBy(desc(resor.startDatum));
 
   return (
     <div>
@@ -39,7 +23,7 @@ export default function ResorPage() {
         <div>
           <h1 className="text-2xl font-bold text-stone-800">Mina resor</h1>
           <p className="text-stone-500 text-sm mt-1">
-            {resor.length} {resor.length === 1 ? "resa" : "resor"} loggade
+            {alleResor.length} {alleResor.length === 1 ? "resa" : "resor"} loggade
           </p>
         </div>
         <Link
@@ -51,7 +35,7 @@ export default function ResorPage() {
         </Link>
       </div>
 
-      {resor.length === 0 ? (
+      {alleResor.length === 0 ? (
         <div className="text-center py-20">
           <div className="bg-emerald-100 p-4 rounded-full inline-flex mb-4">
             <Globe className="text-emerald-600" size={32} />
@@ -68,7 +52,7 @@ export default function ResorPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {resor.map((resa) => (
+          {alleResor.map((resa) => (
             <Link
               key={resa.id}
               href={`/resor/${resa.id}`}

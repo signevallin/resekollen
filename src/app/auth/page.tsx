@@ -1,53 +1,33 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  GoogleAuthProvider,
-  signInWithPopup,
-} from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { loginAction, registerAction } from "@/app/actions/auth";
+import { signIn } from "next-auth/react";
 import { MapPin } from "lucide-react";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-    try {
-      if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
-      } else {
-        await createUserWithEmailAndPassword(auth, email, password);
-      }
-      router.replace("/resor");
-    } catch {
-      setError("Fel e-post eller lösenord. Försök igen.");
-    } finally {
-      setLoading(false);
-    }
+    const formData = new FormData();
+    formData.append("email", email);
+    formData.append("password", password);
+    if (!isLogin) formData.append("name", name);
+    const result = await (isLogin ? loginAction(formData) : registerAction(formData));
+    if (result) setError(result);
+    setLoading(false);
   };
 
-  const handleGoogle = async () => {
-    setError("");
-    setLoading(true);
-    try {
-      await signInWithPopup(auth, new GoogleAuthProvider());
-      router.replace("/resor");
-    } catch {
-      setError("Kunde inte logga in med Google.");
-    } finally {
-      setLoading(false);
-    }
+  const handleGoogle = () => {
+    signIn("google", { callbackUrl: "/resor" });
   };
 
   return (
@@ -62,6 +42,19 @@ export default function AuthPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {!isLogin && (
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Namn</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required={!isLogin}
+                className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                placeholder="Ditt namn"
+              />
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-stone-700 mb-1">E-post</label>
             <input

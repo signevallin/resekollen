@@ -1,36 +1,28 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { useAuth } from "@/hooks/useAuth";
-import { Resa } from "@/types";
+import { auth } from "@/lib/auth";
+import { redirect, notFound } from "next/navigation";
+import { db } from "@/lib/db";
+import { resor } from "@/lib/schema";
+import { eq, and } from "drizzle-orm";
 import Link from "next/link";
 import { ArrowLeft, BookOpen, ListChecks, Calendar, MapPin } from "lucide-react";
 
-export default function ResaPage() {
-  const { id } = useParams<{ id: string }>();
-  const { user, loading } = useAuth();
-  const router = useRouter();
-  const [resa, setResa] = useState<Resa | null>(null);
+export default async function ResaPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const session = await auth();
+  if (!session) redirect("/auth");
 
-  useEffect(() => {
-    if (!loading && !user) router.replace("/auth");
-  }, [user, loading, router]);
+  const [resa] = await db
+    .select()
+    .from(resor)
+    .where(and(eq(resor.id, id), eq(resor.userId, session.user.id)));
 
-  useEffect(() => {
-    if (!user || !id) return;
-    getDoc(doc(db, "resor", id)).then((snap) => {
-      if (snap.exists()) setResa({ id: snap.id, ...snap.data() } as Resa);
-    });
-  }, [user, id]);
+  if (!resa) notFound();
 
-  if (loading || !resa) return <div className="text-center py-20 text-stone-400">Laddar...</div>;
-
-  const dagar = Math.ceil(
-    (new Date(resa.slutDatum).getTime() - new Date(resa.startDatum).getTime()) / (1000 * 60 * 60 * 24)
-  ) + 1;
+  const dagar =
+    Math.ceil(
+      (new Date(resa.slutDatum).getTime() - new Date(resa.startDatum).getTime()) /
+        (1000 * 60 * 60 * 24)
+    ) + 1;
 
   return (
     <div>

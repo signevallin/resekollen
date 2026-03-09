@@ -1,76 +1,38 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import {
-  collection, query, where, orderBy, onSnapshot,
-  addDoc, updateDoc, deleteDoc, doc, serverTimestamp,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { useAuth } from "@/hooks/useAuth";
-import { PacklistaItem, PACKLISTA_KATEGORIER } from "@/types";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { db } from "@/lib/db";
+import { packlistaItems } from "@/lib/schema";
+import { eq, and, asc } from "drizzle-orm";
+import { addItem, toggleItem, deleteItem } from "@/app/actions/packlista";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2, ListChecks } from "lucide-react";
+import { ArrowLeft, ListChecks, Trash2 } from "lucide-react";
 
-export default function PacklistaPage() {
-  const { id } = useParams<{ id: string }>();
-  const { user, loading } = useAuth();
-  const router = useRouter();
-  const [items, setItems] = useState<PacklistaItem[]>([]);
-  const [nyItem, setNyItem] = useState("");
-  const [kategori, setKategori] = useState<string>(PACKLISTA_KATEGORIER[0]);
-  const [adding, setAdding] = useState(false);
+const KATEGORIER = ["Kläder", "Hygien", "Elektronik", "Dokument", "Medicin", "Övrigt"] as const;
 
-  useEffect(() => {
-    if (!loading && !user) router.replace("/auth");
-  }, [user, loading, router]);
+export default async function PacklistaPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const session = await auth();
+  if (!session) redirect("/auth");
 
-  useEffect(() => {
-    if (!user) return;
-    const q = query(
-      collection(db, "packlista"),
-      where("resaId", "==", id),
-      where("userId", "==", user.uid),
-      orderBy("skapadAd", "asc")
-    );
-    return onSnapshot(q, (snap) => {
-      setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() } as PacklistaItem)));
-    });
-  }, [user, id]);
-
-  const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !nyItem.trim()) return;
-    setAdding(true);
-    await addDoc(collection(db, "packlista"), {
-      namn: nyItem.trim(),
-      kategori,
-      packad: false,
-      resaId: id,
-      userId: user.uid,
-      skapadAd: serverTimestamp(),
-    });
-    setNyItem("");
-    setAdding(false);
-  };
-
-  const togglePackad = async (item: PacklistaItem) => {
-    await updateDoc(doc(db, "packlista", item.id), { packad: !item.packad });
-  };
-
-  const handleDelete = async (itemId: string) => {
-    await deleteDoc(doc(db, "packlista", itemId));
-  };
-
-  const grupperadeItems = PACKLISTA_KATEGORIER.reduce((acc, kat) => {
-    const katItems = items.filter((i) => i.kategori === kat);
-    if (katItems.length > 0) acc[kat] = katItems;
-    return acc;
-  }, {} as Record<string, PacklistaItem[]>);
+  const items = await db
+    .select()
+    .from(packlistaItems)
+    .where(
+      and(eq(packlistaItems.resaId, id), eq(packlistaItems.userId, session.user.id))
+    )
+    .orderBy(asc(packlistaItems.skapadAt));
 
   const packade = items.filter((i) => i.packad).length;
 
-  if (loading) return <div className="text-center py-20 text-stone-400">Laddar...</div>;
+  const grupperadeItems = KATEGORIER.reduce((acc, kat) => {
+    const katItems = items.filter((i) => i.kategori === kat);
+    if (katItems.length > 0) acc[kat] = katItems;
+    return acc;
+  }, {} as Record<string, typeof items>);
 
   return (
     <div>
@@ -100,35 +62,34 @@ export default function PacklistaPage() {
         </div>
       )}
 
+      {/* Lägg till formulär */}
       <div className="bg-white rounded-xl border border-stone-200 p-5 mb-6">
-        <form onSubmit={handleAdd} className="flex gap-3">
+        <form action={addItem.bind(null, id)} className="flex gap-3">
           <select
-            value={kategori}
-            onChange={(e) => setKategori(e.target.value)}
+            name="kategori"
             className="border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
           >
-            {PACKLISTA_KATEGORIER.map((k) => (
+            {KATEGORIER.map((k) => (
               <option key={k} value={k}>{k}</option>
             ))}
           </select>
           <input
+            name="namn"
             type="text"
-            value={nyItem}
-            onChange={(e) => setNyItem(e.target.value)}
+            required
             placeholder="Lägg till sak..."
             className="flex-1 border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
           <button
             type="submit"
-            disabled={adding || !nyItem.trim()}
-            className="flex items-center gap-1.5 bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+            className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 transition-colors"
           >
-            <Plus size={16} />
             Lägg till
           </button>
         </form>
       </div>
 
+      {/* Lista */}
       {items.length === 0 ? (
         <div className="text-center py-16">
           <div className="bg-blue-100 p-4 rounded-full inline-flex mb-4">
@@ -140,25 +101,42 @@ export default function PacklistaPage() {
         <div className="space-y-5">
           {Object.entries(grupperadeItems).map(([kat, katItems]) => (
             <div key={kat}>
-              <h3 className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-2">{kat}</h3>
+              <h3 className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-2">
+                {kat}
+              </h3>
               <div className="bg-white rounded-xl border border-stone-200 divide-y divide-stone-100">
                 {katItems.map((item) => (
                   <div key={item.id} className="flex items-center gap-3 px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={item.packad}
-                      onChange={() => togglePackad(item)}
-                      className="w-4 h-4 accent-emerald-600 cursor-pointer"
-                    />
-                    <span className={`flex-1 text-sm ${item.packad ? "line-through text-stone-400" : "text-stone-700"}`}>
-                      {item.namn}
-                    </span>
-                    <button
-                      onClick={() => handleDelete(item.id)}
-                      className="text-stone-300 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 size={15} />
-                    </button>
+                    <form action={toggleItem.bind(null, item.id, id, !item.packad)}>
+                      <button type="submit" className="flex items-center gap-3">
+                        <span
+                          className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                            item.packad
+                              ? "bg-emerald-500 border-emerald-500"
+                              : "border-stone-300"
+                          }`}
+                        >
+                          {item.packad && (
+                            <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </span>
+                        <span
+                          className={`text-sm ${
+                            item.packad ? "line-through text-stone-400" : "text-stone-700"
+                          }`}
+                        >
+                          {item.namn}
+                        </span>
+                      </button>
+                    </form>
+                    <div className="flex-1" />
+                    <form action={deleteItem.bind(null, item.id, id)}>
+                      <button type="submit" className="text-stone-300 hover:text-red-400 transition-colors">
+                        <Trash2 size={15} />
+                      </button>
+                    </form>
                   </div>
                 ))}
               </div>
