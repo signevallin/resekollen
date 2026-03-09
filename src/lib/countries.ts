@@ -176,6 +176,13 @@ const ALPHA2_TO_ENTRY = new Map<string, CountryEntry>(
   COUNTRY_DB.map((e) => [e.alpha2, e])
 );
 
+export function splitLand(land: string): string[] {
+  return land
+    .split(/\s*·\s*|\s*,\s*/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 export function lookupCountry(name: string): CountryEntry | null {
   const normalized = name.trim().toLowerCase();
   const alpha2 = SWEDISH_NAMES[normalized];
@@ -196,7 +203,8 @@ export function getFlagEmoji(alpha2: string): string {
 }
 
 export function getCountryFlag(name: string): string {
-  const entry = lookupCountry(name);
+  const first = splitLand(name)[0] ?? name;
+  const entry = lookupCountry(first);
   if (!entry) return "🌍";
   return getFlagEmoji(entry.alpha2);
 }
