@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { resor } from "@/lib/schema";
 import { eq } from "drizzle-orm";
-import { lookupCountry, getFlagEmoji, getCountryNumericCode } from "@/lib/countries";
+import { lookupCountry, getFlagEmoji, getCountryNumericCode, splitLand } from "@/lib/countries";
 import WorldMap from "@/components/karta/WorldMap";
 import { Globe } from "lucide-react";
 
@@ -19,16 +19,18 @@ export default async function KartaPage() {
   // Build unique countries with trip counts
   const countryMap = new Map<string, { name: string; alpha2: string; count: number }>();
   for (const trip of trips) {
-    const key = trip.land.trim().toLowerCase();
-    const entry = lookupCountry(trip.land);
-    if (countryMap.has(key)) {
-      countryMap.get(key)!.count++;
-    } else {
-      countryMap.set(key, {
-        name: trip.land.trim(),
-        alpha2: entry?.alpha2 ?? "",
-        count: 1,
-      });
+    for (const countryName of splitLand(trip.land)) {
+      const key = countryName.trim().toLowerCase();
+      const entry = lookupCountry(countryName);
+      if (countryMap.has(key)) {
+        countryMap.get(key)!.count++;
+      } else {
+        countryMap.set(key, {
+          name: countryName.trim(),
+          alpha2: entry?.alpha2 ?? "",
+          count: 1,
+        });
+      }
     }
   }
 
@@ -40,7 +42,8 @@ export default async function KartaPage() {
   const visitedNumerics = [
     ...new Set(
       trips
-        .map((t) => getCountryNumericCode(t.land))
+        .flatMap((t) => splitLand(t.land))
+        .map((c) => getCountryNumericCode(c))
         .filter((n): n is number => n !== null)
     ),
   ];
