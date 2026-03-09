@@ -106,7 +106,7 @@ export default function ImporteraFotonPage() {
     setImporting(true);
     try {
       const res = await importerGoogleResor(selected);
-      if (res && "error" in res) { setError(res.error); return; }
+      if (res && "error" in res) { setError(res.error ?? "Okänt fel"); return; }
       setDone(res?.count ?? selected.length);
       setTimeout(() => router.push("/resor"), 1800);
     } finally {
