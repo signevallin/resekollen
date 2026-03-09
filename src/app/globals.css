@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #F5F0E8;
+  --foreground: #2E2310;
 }
 
 @theme inline {
@@ -12,11 +12,41 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ─── Earthy colour palette ─────────────────────────────────────────────────
+   Café Noir   #4C3D19   Kombu Green #354024
+   Moss Green  #889063   Tan         #CFBB99   Bone  #E5D7C4
+   ──────────────────────────────────────────────────────────────────────── */
+@theme {
+  /* Emerald → Kombu / Moss family */
+  --color-emerald-50:  #F0EAE0;
+  --color-emerald-100: #E5D7C4;
+  --color-emerald-200: #D4C4A8;
+  --color-emerald-300: #C0AC88;
+  --color-emerald-400: #A89870;
+  --color-emerald-500: #889063;
+  --color-emerald-600: #6E7550;
+  --color-emerald-700: #354024;
+  --color-emerald-800: #4C3D19;
+  --color-emerald-900: #2A2210;
+  --color-emerald-950: #1A1609;
+
+  /* Teal → Kombu (used in header gradients) */
+  --color-teal-400:  #889063;
+  --color-teal-500:  #6E7550;
+  --color-teal-600:  #354024;
+
+  /* Stone → warm Bone / Tan family */
+  --color-stone-50:  #F7F3EE;
+  --color-stone-100: #EDE4D5;
+  --color-stone-200: #DDD0BA;
+  --color-stone-300: #CFBB99;
+  --color-stone-400: #A89880;
+  --color-stone-500: #8B7B65;
+  --color-stone-600: #5E4F3A;
+  --color-stone-700: #4C3D19;
+  --color-stone-800: #2E2310;
+  --color-stone-900: #1A1409;
+  --color-stone-950: #0E0B05;
 }
 
 body {
