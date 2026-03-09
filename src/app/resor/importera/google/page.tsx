@@ -638,25 +638,31 @@ export default function GoogleImportPage() {
                 {trips.map((trip, i) => (
                   <tr
                     key={i}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, i)}
                     onDragOver={(e) => handleDragOver(e, i)}
                     onDragLeave={() => setDragOverIndex(null)}
                     onDrop={(e) => handleDrop(e, i)}
-                    onDragEnd={handleDragEnd}
                     onClick={() => toggleTrip(i)}
                     className={`transition-all ${
                       dragIndex === i
                         ? "opacity-30 bg-stone-50"
                         : dragOverIndex === i
-                        ? "ring-2 ring-inset ring-emerald-500 bg-emerald-50 cursor-copy"
+                        ? "ring-2 ring-inset ring-emerald-500 bg-emerald-50"
                         : trip.selected
                         ? "bg-white hover:bg-stone-50 cursor-pointer"
                         : "bg-stone-50 opacity-50 cursor-pointer"
                     }`}
                   >
-                    <td className="p-3 pl-3" onClick={(e) => e.stopPropagation()}>
-                      <GripVertical size={14} className="text-stone-300 cursor-grab mx-auto" />
+                    <td
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, i)}
+                      onDragEnd={handleDragEnd}
+                      className="pl-3 pr-1 py-3 text-center cursor-grab active:cursor-grabbing"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <GripVertical
+                        size={16}
+                        className="text-stone-400 hover:text-stone-600 transition-colors"
+                      />
                     </td>
                     <td className="p-3 text-center">
                       {trip.selected
