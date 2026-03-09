@@ -37,13 +37,12 @@ export default function ResorList({ trips }: { trips: Resa[] }) {
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [merging,    setMerging]    = useState(false);
 
-  const handleDrop = async (targetId: string) => {
-    if (!dragId || dragId === targetId) {
-      setDragId(null); setDragOverId(null); return;
-    }
+  const handleDrop = async (sourceId: string, targetId: string) => {
+    if (!sourceId || sourceId === targetId) return;
 
-    const a = trips.find((t) => t.id === dragId)!;
+    const a = trips.find((t) => t.id === sourceId)!;
     const b = trips.find((t) => t.id === targetId)!;
+    if (!a || !b) return;
     const [first, second] = [a, b].sort((x, y) =>
       x.startDatum.localeCompare(y.startDatum)
     );
@@ -135,10 +134,28 @@ export default function ResorList({ trips }: { trips: Resa[] }) {
               <div
                 key={resa.id}
                 draggable
-                onDragStart={() => setDragId(resa.id)}
-                onDragOver={(e) => { e.preventDefault(); if (dragId !== resa.id) setDragOverId(resa.id); }}
-                onDragLeave={() => setDragOverId(null)}
-                onDrop={(e) => { e.preventDefault(); handleDrop(resa.id); }}
+                onDragStart={(e) => {
+                  e.dataTransfer.setData("text/plain", resa.id);
+                  e.dataTransfer.effectAllowed = "move";
+                  setDragId(resa.id);
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  if (dragId !== resa.id) setDragOverId(resa.id);
+                }}
+                onDragLeave={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                    setDragOverId(null);
+                  }
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const srcId = e.dataTransfer.getData("text/plain");
+                  setDragOverId(null);
+                  setDragId(null);
+                  handleDrop(srcId, resa.id);
+                }}
                 onDragEnd={() => { setDragId(null); setDragOverId(null); }}
                 className={`${cardClass} cursor-grab active:cursor-grabbing`}
               >
