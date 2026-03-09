@@ -371,9 +371,32 @@ export default function GoogleImportPage() {
           }
           setTrips(detected);
           setStep("preview");
+        } else if (
+          Array.isArray(data) &&
+          data.length > 0 &&
+          typeof (data[0] as Record<string, unknown>).destination === "string" &&
+          typeof (data[0] as Record<string, unknown>).startDatum === "string"
+        ) {
+          // ── trips.json från extract_photo_trips.py — redan geokodad ──
+          const detected: DetectedTrip[] = (data as Record<string, unknown>[])
+            .map((r) => ({
+              destination: String(r.destination ?? ""),
+              land:        String(r.land        ?? ""),
+              startDatum:  String(r.startDatum  ?? ""),
+              slutDatum:   String(r.slutDatum   ?? ""),
+              dagar:       daysBetween(String(r.startDatum), String(r.slutDatum)),
+              selected:    true,
+            }))
+            .sort((a, b) => b.startDatum.localeCompare(a.startDatum));
+          if (!detected.length) {
+            setError("Inga resor hittades i trips.json.");
+            return;
+          }
+          setTrips(detected);
+          setStep("preview");
         } else {
           setError(
-            "Okänt filformat. Prova Tidslinje.html, Timeline.json, location-history.json eller en månads-JSON från Google Takeout."
+            "Okänt filformat. Prova Tidslinje.html, Timeline.json, location-history.json, trips.json eller en månads-JSON från Google Takeout."
           );
         }
       } catch {
@@ -521,7 +544,8 @@ export default function GoogleImportPage() {
         <p className="text-stone-500 text-sm mt-1">
           Stöder <code className="bg-stone-100 px-1 rounded">Tidslinje.html</code>,{" "}
           <code className="bg-stone-100 px-1 rounded">location-history.json</code>,{" "}
-          <code className="bg-stone-100 px-1 rounded">Timeline.json</code> och äldre månadsformat.
+          <code className="bg-stone-100 px-1 rounded">Timeline.json</code>,{" "}
+          <code className="bg-stone-100 px-1 rounded">trips.json</code> och äldre månadsformat.
         </p>
       </div>
 
@@ -579,7 +603,7 @@ export default function GoogleImportPage() {
           <FileJson className="mx-auto text-stone-400 mb-3" size={38} />
           <p className="font-medium text-stone-600">Dra och släpp filen här</p>
           <p className="text-stone-400 text-sm mt-1">eller klicka för att välja fil</p>
-          <p className="text-stone-300 text-xs mt-2">.html · .json</p>
+          <p className="text-stone-300 text-xs mt-2">.html · .json · trips.json</p>
           <input ref={fileRef} type="file" accept=".json,.html,.htm" className="hidden" onChange={onInputChange} />
         </div>
       )}
