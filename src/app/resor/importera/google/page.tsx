@@ -49,6 +49,13 @@ function parseLatLng(s: string): { lat: number; lon: number } | null {
   };
 }
 
+// Parse "geo:58.3126,12.3271" → {lat, lon}
+function parseGeoUri(s: string): { lat: number; lon: number } | null {
+  const m = s.match(/^geo:([-\d.]+),([-\d.]+)/);
+  if (!m) return null;
+  return { lat: parseFloat(m[1]), lon: parseFloat(m[2]) };
+}
+
 function cellKey(lat: number, lon: number): string {
   return `${lat.toFixed(1)},${lon.toFixed(1)}`;
 }
@@ -228,6 +235,58 @@ async function parseNewFormat(
   return mergeVisits(mapped);
 }
 
+// ─── location-history.json format (flat array, geo: URIs) ───────────────────
+
+async function parseLocationHistoryFormat(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any[],
+  onProgress: (done: number, total: number) => void
+): Promise<DetectedTrip[]> {
+  type RawVisit = { lat: number; lon: number; start: Date; end: Date };
+
+  const visits: RawVisit[] = data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .filter((s: any) => s?.visit?.topCandidate?.placeLocation && s.visit.hierarchyLevel === "0")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .map((s: any) => {
+      const coords = parseGeoUri(s.visit.topCandidate.placeLocation);
+      if (!coords) return null;
+      return { ...coords, start: new Date(s.startTime), end: new Date(s.endTime) };
+    })
+    .filter((v): v is RawVisit => {
+      if (!v) return false;
+      const hours = (v.end.getTime() - v.start.getTime()) / (1000 * 60 * 60);
+      return hours >= 8 && !isNaN(v.start.getTime());
+    });
+
+  const uniqueCells = [...new Set(visits.map((v) => cellKey(v.lat, v.lon)))];
+  const geoCache = new Map<string, { city: string; country: string }>();
+
+  for (let i = 0; i < uniqueCells.length; i++) {
+    const [lat, lon] = uniqueCells[i].split(",").map(Number);
+    const result = await reverseGeocode(lat, lon);
+    if (result) geoCache.set(uniqueCells[i], result);
+    onProgress(i + 1, uniqueCells.length);
+    if (i < uniqueCells.length - 1) {
+      await new Promise((r) => setTimeout(r, 1200));
+    }
+  }
+
+  const mapped = visits
+    .map((v) => {
+      const geo = geoCache.get(cellKey(v.lat, v.lon));
+      return {
+        destination: geo?.city    || `${v.lat.toFixed(2)}°, ${v.lon.toFixed(2)}°`,
+        land:        geo?.country || "",
+        start: v.start,
+        end:   v.end,
+      };
+    })
+    .filter((v) => v.land !== "");
+
+  return mergeVisits(mapped);
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function GoogleImportPage() {
@@ -284,7 +343,7 @@ export default function GoogleImportPage() {
           setTrips(detected);
           setStep("preview");
         } else if (data.semanticSegments) {
-          // ── New format: async geocoding ──
+          // ── New format (Timeline.json): async geocoding ──
           setStep("geocoding");
           const detected = await parseNewFormat(data, (done, total) =>
             setGeoProgress({ done, total })
@@ -296,9 +355,22 @@ export default function GoogleImportPage() {
           }
           setTrips(detected);
           setStep("preview");
+        } else if (Array.isArray(data) && data.some((s: unknown) => (s as Record<string, unknown>)?.visit || (s as Record<string, unknown>)?.activity)) {
+          // ── location-history.json format: async geocoding ──
+          setStep("geocoding");
+          const detected = await parseLocationHistoryFormat(data, (done, total) =>
+            setGeoProgress({ done, total })
+          );
+          if (!detected.length) {
+            setError("Inga platser hittades i location-history.json.");
+            setStep("upload");
+            return;
+          }
+          setTrips(detected);
+          setStep("preview");
         } else {
           setError(
-            "Okänt filformat. Filen bör vara en månads-JSON (äldre) eller Timeline.json (nyare) från Google Takeout."
+            "Okänt filformat. Prova Tidslinje.html, Timeline.json, location-history.json eller en månads-JSON från Google Takeout."
           );
         }
       } catch {
@@ -360,8 +432,9 @@ export default function GoogleImportPage() {
         </Link>
         <h1 className="text-2xl font-bold text-stone-800">Importera från Google Tidslinje</h1>
         <p className="text-stone-500 text-sm mt-1">
-          Stöder <code className="bg-stone-100 px-1 rounded">.html</code> (2025),{" "}
-          <code className="bg-stone-100 px-1 rounded">Timeline.json</code> (2024) och äldre månadsformat.
+          Stöder <code className="bg-stone-100 px-1 rounded">Tidslinje.html</code>,{" "}
+          <code className="bg-stone-100 px-1 rounded">location-history.json</code>,{" "}
+          <code className="bg-stone-100 px-1 rounded">Timeline.json</code> och äldre månadsformat.
         </p>
       </div>
 
@@ -375,8 +448,9 @@ export default function GoogleImportPage() {
           <li>
             Ladda upp filen du hittar i <code className="bg-stone-200 px-1 rounded">Takeout/Platshistorik/</code>:<br />
             <span className="text-stone-500 leading-6">
-              <code className="bg-stone-200 px-1 rounded">Tidslinje.html</code> (nyaste, 2025) &nbsp;·&nbsp;
-              <code className="bg-stone-200 px-1 rounded">Timeline.json</code> (2024) &nbsp;·&nbsp;
+              <code className="bg-stone-200 px-1 rounded">Tidslinje.html</code> &nbsp;·&nbsp;
+              <code className="bg-stone-200 px-1 rounded">location-history.json</code> &nbsp;·&nbsp;
+              <code className="bg-stone-200 px-1 rounded">Timeline.json</code> &nbsp;·&nbsp;
               eller en månadsfil från <code className="bg-stone-200 px-1 rounded">Semantic Location History/</code>
             </span>
           </li>
