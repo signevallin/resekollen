@@ -14,6 +14,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Globe,
+  GitMerge,
 } from "lucide-react";
 import { importerGoogleResor, type TripToImport } from "@/app/actions/importGoogle";
 
@@ -420,6 +421,46 @@ export default function GoogleImportPage() {
     setTimeout(() => router.push("/resor"), 1800);
   };
 
+  // ── Merge selected trips ───────────────────────────────────────────────────
+
+  const handleMerge = () => {
+    const selectedIndices = trips
+      .map((t, i) => (t.selected ? i : -1))
+      .filter((i) => i >= 0);
+    if (selectedIndices.length < 2) return;
+
+    const selectedTrips = selectedIndices.map((i) => trips[i]);
+
+    // Unique destinations and countries, preserving order
+    const destinations = selectedTrips
+      .map((t) => t.destination)
+      .filter((d, i, arr) => arr.indexOf(d) === i);
+    const countries = selectedTrips
+      .map((t) => t.land)
+      .filter((c, i, arr) => arr.indexOf(c) === i);
+
+    // Earliest start, latest end
+    const allStarts = selectedTrips.map((t) => t.startDatum).sort();
+    const allEnds   = selectedTrips.map((t) => t.slutDatum).sort();
+    const startDatum = allStarts[0];
+    const slutDatum  = allEnds[allEnds.length - 1];
+
+    const merged: DetectedTrip = {
+      destination: destinations.join(" · "),
+      land:        countries.join(" · "),
+      startDatum,
+      slutDatum,
+      dagar:    daysBetween(startDatum, slutDatum),
+      selected: true,
+    };
+
+    // Replace selected trips with merged entry at position of first selected
+    const firstIdx = selectedIndices[0];
+    const remaining = trips.filter((_, i) => !selectedIndices.includes(i));
+    remaining.splice(firstIdx, 0, merged);
+    setTrips(remaining);
+  };
+
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -583,6 +624,15 @@ export default function GoogleImportPage() {
             </button>
             <div className="flex items-center gap-3">
               <span className="text-sm text-stone-500">{selectedCount} av {trips.length} valda</span>
+              {selectedCount >= 2 && (
+                <button
+                  onClick={handleMerge}
+                  className="flex items-center gap-2 border border-stone-300 text-stone-600 rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-stone-50 transition-colors"
+                  title="Slå ihop de markerade resorna till en resa"
+                >
+                  <GitMerge size={15} /> Slå ihop {selectedCount} valda
+                </button>
+              )}
               <button
                 onClick={handleImport}
                 disabled={selectedCount === 0 || importing}
