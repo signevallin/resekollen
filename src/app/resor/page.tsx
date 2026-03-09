@@ -5,7 +5,7 @@ import { resor } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { desc } from "drizzle-orm";
 import Link from "next/link";
-import { MapPin, PlusCircle, Calendar, Globe } from "lucide-react";
+import { MapPin, PlusCircle, Calendar, Globe, Download } from "lucide-react";
 
 export default async function ResorPage() {
   const session = await auth();
@@ -26,13 +26,22 @@ export default async function ResorPage() {
             {alleResor.length} {alleResor.length === 1 ? "resa" : "resor"} loggade
           </p>
         </div>
-        <Link
-          href="/resor/ny"
-          className="flex items-center gap-2 bg-emerald-700 text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-emerald-800 transition-colors"
-        >
-          <PlusCircle size={16} />
-          Ny resa
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/resor/importera/google"
+            className="flex items-center gap-2 border border-stone-200 text-stone-600 rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-stone-50 transition-colors"
+          >
+            <Download size={15} />
+            Importera
+          </Link>
+          <Link
+            href="/resor/ny"
+            className="flex items-center gap-2 bg-emerald-700 text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-emerald-800 transition-colors"
+          >
+            <PlusCircle size={16} />
+            Ny resa
+          </Link>
+        </div>
       </div>
 
       {alleResor.length === 0 ? (
