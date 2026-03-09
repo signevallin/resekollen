@@ -94,6 +94,44 @@ function mergeVisits(
   return merged.reverse();
 }
 
+// ─── HTML extraction ──────────────────────────────────────────────────────────
+// Google's newest export embeds timeline data as JSON inside a <script> tag.
+// We find the JSON object by locating known key names and bracket-matching.
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function extractJsonFromHtml(html: string): any | null {
+  const markers = ['"semanticSegments"', '"timelineObjects"', '"locations"'];
+
+  for (const marker of markers) {
+    const idx = html.indexOf(marker);
+    if (idx < 0) continue;
+
+    // Walk backward from marker to find the root opening brace
+    let depth = 0, start = -1;
+    for (let i = idx - 1; i >= 0; i--) {
+      const c = html[i];
+      if (c === "}") depth++;
+      else if (c === "{") {
+        if (depth === 0) { start = i; break; }
+        depth--;
+      }
+    }
+    if (start < 0) continue;
+
+    // Walk forward to find the matching closing brace
+    depth = 0; let end = -1;
+    for (let i = start; i < html.length; i++) {
+      const c = html[i];
+      if (c === "{") depth++;
+      else if (c === "}") { depth--; if (depth === 0) { end = i; break; } }
+    }
+    if (end < 0) continue;
+
+    try { return JSON.parse(html.slice(start, end + 1)); } catch { continue; }
+  }
+  return null;
+}
+
 // ─── Old format (timelineObjects) ────────────────────────────────────────────
 
 function extractCountry(address: string): string {
@@ -209,8 +247,10 @@ export default function GoogleImportPage() {
   const handleFile = useCallback((file: File) => {
     setError(""); setTrips([]); setDoneCount(0); setStep("upload");
 
-    if (!file.name.endsWith(".json")) {
-      setError("Välj en .json-fil från Google Tidslinje.");
+    const isJson = file.name.endsWith(".json");
+    const isHtml = file.name.endsWith(".html") || file.name.endsWith(".htm");
+    if (!isJson && !isHtml) {
+      setError("Välj en .json- eller .html-fil från Google Tidslinje.");
       return;
     }
     setFileName(file.name);
@@ -218,7 +258,21 @@ export default function GoogleImportPage() {
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
-        const data = JSON.parse(e.target?.result as string);
+        const raw = e.target?.result as string;
+
+        // HTML-export: extract embedded JSON first
+        let data = isHtml ? extractJsonFromHtml(raw) : JSON.parse(raw);
+        if (isHtml && !data) {
+          setError(
+            "Kunde inte hitta tidslinjedata i HTML-filen. " +
+            "Google bäddar in data på olika sätt beroende på version — " +
+            "prova att öppna HTML-filen i din webbläsare, högerklicka → Visa källkod, " +
+            "och kontrollera om det finns en JSON-fil att ladda ner därifrån."
+          );
+          setStep("upload");
+          return;
+        }
+        if (!data) data = JSON.parse(raw);
 
         if (data.timelineObjects) {
           // ── Old format: sync ──
@@ -306,7 +360,8 @@ export default function GoogleImportPage() {
         </Link>
         <h1 className="text-2xl font-bold text-stone-800">Importera från Google Tidslinje</h1>
         <p className="text-stone-500 text-sm mt-1">
-          Stöder både det äldre månadsformatet och den nya <code className="bg-stone-100 px-1 rounded">Timeline.json</code>.
+          Stöder <code className="bg-stone-100 px-1 rounded">.html</code> (2025),{" "}
+          <code className="bg-stone-100 px-1 rounded">Timeline.json</code> (2024) och äldre månadsformat.
         </p>
       </div>
 
@@ -318,8 +373,12 @@ export default function GoogleImportPage() {
           <li>Välj <strong>Platshistorik (tidslinje)</strong> → Nästa steg → Skapa export</li>
           <li>Ladda ner ZIP-filen och packa upp den</li>
           <li>
-            <strong>Nytt format (2024+):</strong> Ladda upp <code className="bg-stone-200 px-1 rounded">Timeline.json</code><br />
-            <span className="text-stone-400">Äldre format: ladda upp en fil från mappen <code className="bg-stone-200 px-1 rounded">Semantic Location History/[år]/</code></span>
+            Ladda upp filen du hittar i <code className="bg-stone-200 px-1 rounded">Takeout/Platshistorik/</code>:<br />
+            <span className="text-stone-500 leading-6">
+              <code className="bg-stone-200 px-1 rounded">Tidslinje.html</code> (nyaste, 2025) &nbsp;·&nbsp;
+              <code className="bg-stone-200 px-1 rounded">Timeline.json</code> (2024) &nbsp;·&nbsp;
+              eller en månadsfil från <code className="bg-stone-200 px-1 rounded">Semantic Location History/</code>
+            </span>
           </li>
         </ol>
         <p className="text-stone-400 text-xs pt-1 flex items-start gap-1.5">
@@ -357,9 +416,10 @@ export default function GoogleImportPage() {
           className="border-2 border-dashed border-stone-300 rounded-xl p-14 text-center cursor-pointer hover:border-emerald-700 hover:bg-stone-50 transition-colors"
         >
           <FileJson className="mx-auto text-stone-400 mb-3" size={38} />
-          <p className="font-medium text-stone-600">Dra och släpp JSON-fil här</p>
+          <p className="font-medium text-stone-600">Dra och släpp filen här</p>
           <p className="text-stone-400 text-sm mt-1">eller klicka för att välja fil</p>
-          <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={onInputChange} />
+          <p className="text-stone-300 text-xs mt-2">.html · .json</p>
+          <input ref={fileRef} type="file" accept=".json,.html,.htm" className="hidden" onChange={onInputChange} />
         </div>
       )}
 
