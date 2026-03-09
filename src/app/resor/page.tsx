@@ -2,10 +2,10 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { resor } from "@/lib/schema";
-import { eq } from "drizzle-orm";
-import { desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import Link from "next/link";
-import { MapPin, PlusCircle, Calendar, Globe, Download } from "lucide-react";
+import { PlusCircle, Globe, Download } from "lucide-react";
+import ResorList from "@/components/resor/ResorList";
 
 export default async function ResorPage() {
   const session = await auth();
@@ -60,36 +60,7 @@ export default async function ResorPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {alleResor.map((resa) => (
-            <Link
-              key={resa.id}
-              href={`/resor/${resa.id}`}
-              className="bg-white rounded-xl border border-stone-200 overflow-hidden hover:shadow-md transition-shadow group"
-            >
-              <div className="h-36 bg-gradient-to-br from-emerald-400 to-teal-600 relative flex items-center justify-center">
-                {resa.omslagsbild ? (
-                  <img src={resa.omslagsbild} alt={resa.destination} className="w-full h-full object-cover" />
-                ) : (
-                  <MapPin className="text-white/60" size={40} />
-                )}
-              </div>
-              <div className="p-4">
-                <h3 className="font-semibold text-stone-800 group-hover:text-emerald-700 transition-colors">
-                  {resa.destination}
-                </h3>
-                <p className="text-sm text-stone-500 mt-0.5">{resa.land}</p>
-                <div className="flex items-center gap-1.5 mt-3 text-xs text-stone-400">
-                  <Calendar size={12} />
-                  <span>
-                    {new Date(resa.startDatum).toLocaleDateString("sv-SE")} –{" "}
-                    {new Date(resa.slutDatum).toLocaleDateString("sv-SE")}
-                  </span>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+        <ResorList trips={alleResor} />
       )}
     </div>
   );
