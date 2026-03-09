@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   Globe,
   GitMerge,
+  GripVertical,
 } from "lucide-react";
 import { importerGoogleResor, type TripToImport } from "@/app/actions/importGoogle";
 
@@ -301,6 +302,8 @@ export default function GoogleImportPage() {
   const [geoProgress, setGeoProgress] = useState({ done: 0, total: 0 });
   const [importing, setImporting]     = useState(false);
   const [doneCount, setDoneCount]     = useState(0);
+  const [dragIndex,     setDragIndex]     = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   // ── File handling ──────────────────────────────────────────────────────────
 
@@ -461,6 +464,50 @@ export default function GoogleImportPage() {
     setTrips(remaining);
   };
 
+  // ── Drag-to-merge ──────────────────────────────────────────────────────────
+
+  const mergeTwoTrips = (idxA: number, idxB: number) => {
+    const a = trips[idxA];
+    const b = trips[idxB];
+    const byDate = [a, b].sort((x, y) => x.startDatum.localeCompare(y.startDatum));
+    const dests  = byDate.map((t) => t.destination).filter((d, i, arr) => arr.indexOf(d) === i);
+    const lands  = byDate.map((t) => t.land).filter((c, i, arr) => arr.indexOf(c) === i);
+    const allStarts = [a.startDatum, b.startDatum].sort();
+    const allEnds   = [a.slutDatum,  b.slutDatum ].sort();
+    const startDatum = allStarts[0];
+    const slutDatum  = allEnds[allEnds.length - 1];
+    const merged: DetectedTrip = {
+      destination: dests.join(" · "),
+      land:        lands.join(" · "),
+      startDatum,  slutDatum,
+      dagar:    daysBetween(startDatum, slutDatum),
+      selected: a.selected || b.selected,
+    };
+    const minIdx = Math.min(idxA, idxB);
+    const rest   = trips.filter((_, i) => i !== idxA && i !== idxB);
+    rest.splice(minIdx, 0, merged);
+    setTrips(rest);
+  };
+
+  const handleDragStart = (e: React.DragEvent, i: number) => {
+    setDragIndex(i);
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const handleDragOver = (e: React.DragEvent, i: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragIndex !== null && dragIndex !== i) setDragOverIndex(i);
+  };
+  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (dragIndex === null || dragIndex === targetIndex) {
+      setDragIndex(null); setDragOverIndex(null); return;
+    }
+    mergeTwoTrips(dragIndex, targetIndex);
+    setDragIndex(null); setDragOverIndex(null);
+  };
+  const handleDragEnd = () => { setDragIndex(null); setDragOverIndex(null); };
+
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -570,11 +617,16 @@ export default function GoogleImportPage() {
               {trips.every((t) => t.selected) ? "Avmarkera alla" : "Markera alla"}
             </button>
           </div>
+          <p className="text-xs text-stone-400 mb-2 flex items-center gap-1.5">
+            <GripVertical size={12} />
+            Dra en rad och släpp den på en annan för att slå ihop dem — eller markera flera och klicka "Slå ihop".
+          </p>
 
           <div className="border border-stone-200 rounded-xl overflow-hidden mb-6">
             <table className="w-full text-sm">
               <thead className="bg-stone-50 border-b border-stone-200">
                 <tr>
+                  <th className="w-7 p-3" />
                   <th className="w-10 p-3" />
                   <th className="text-left p-3 font-medium text-stone-600">Destination</th>
                   <th className="text-left p-3 font-medium text-stone-600">Land</th>
@@ -586,11 +638,26 @@ export default function GoogleImportPage() {
                 {trips.map((trip, i) => (
                   <tr
                     key={i}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, i)}
+                    onDragOver={(e) => handleDragOver(e, i)}
+                    onDragLeave={() => setDragOverIndex(null)}
+                    onDrop={(e) => handleDrop(e, i)}
+                    onDragEnd={handleDragEnd}
                     onClick={() => toggleTrip(i)}
-                    className={`cursor-pointer transition-colors ${
-                      trip.selected ? "bg-white hover:bg-stone-50" : "bg-stone-50 opacity-50"
+                    className={`transition-all ${
+                      dragIndex === i
+                        ? "opacity-30 bg-stone-50"
+                        : dragOverIndex === i
+                        ? "ring-2 ring-inset ring-emerald-500 bg-emerald-50 cursor-copy"
+                        : trip.selected
+                        ? "bg-white hover:bg-stone-50 cursor-pointer"
+                        : "bg-stone-50 opacity-50 cursor-pointer"
                     }`}
                   >
+                    <td className="p-3 pl-3" onClick={(e) => e.stopPropagation()}>
+                      <GripVertical size={14} className="text-stone-300 cursor-grab mx-auto" />
+                    </td>
                     <td className="p-3 text-center">
                       {trip.selected
                         ? <CheckSquare size={16} className="text-emerald-700 mx-auto" />

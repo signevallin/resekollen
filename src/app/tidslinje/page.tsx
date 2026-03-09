@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { resor } from "@/lib/schema";
-import { eq, asc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import Link from "next/link";
 import { Clock, MapPin, ArrowRight } from "lucide-react";
 import { getCountryFlag } from "@/lib/countries";
@@ -21,7 +21,7 @@ export default async function TidslinjePage() {
     .select()
     .from(resor)
     .where(eq(resor.userId, session.user.id))
-    .orderBy(asc(resor.startDatum));
+    .orderBy(desc(resor.startDatum));
 
   // Group by year, show newest first
   const resorPerAr: Record<string, typeof trips> = {};
